@@ -1,0 +1,119 @@
+---
+title: "Fish EDAS Data Organization and Move to R Server"
+author: "Emma Jones"
+date: "4/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(tidyverse)
+library(readxl)
+library(pins)
+library(config)
+
+# get configuration settings
+conn <- config::get("connectionSettings")
+
+# use API key to register board
+board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_KEY"),
+                          server = conn$CONNECT_SERVER)#Sys.getenv("CONNECT_SERVER"))
+```
+
+## Background
+
+Fish EDAS has traditionally lived in a MS Access database (separate from the bug EDAS database) with one data enter-er (Royce Steiner) and two data QA officers (Jason Hill and Royce Steiner). In an effort to share data with more parties, the pertinent tables that will (eventually) be moved into CEDS will be cleaned up and moved to the R server. After the data is available on the R sever, it can be used to build a variety of tools. Once the official database is moved into CEDS, these tools will simply need to adjust their data source from the pinned data to the ODS environment and everything will work with a more "live" connection.
+
+## Fish EDAS 
+
+The money query Jason Hill has traditionally used is the "Total Number of fish" query in fish EDAS. This query pulls data from the "Stations," "FishSamps", "Fishes Master Taxa", and "Fishes" tables. Those tables are exported to excel for manipulation and pinning.
+
+### Stations
+
+This table holds a lot of the same information that other pinned data contains on the server except a completed WQS class field. This dataset will be cleaned up and the minimal data will be pinned to the server. One day, this data should be removed as other datasets should contain the information.
+
+```{r stations}
+fishStations <- read_excel('data/Stations.xlsx', sheet = 'Stations')
+```
+
+Fix some missing data before moving online. Fix wrong column names.
+
+```{r fish station issues}
+fishStationsFixed <- read_excel('data/Stations.xlsx', sheet = 'EVJfixes')
+fishStations <- filter(fishStations, ! StationID %in% fishStationsFixed$StationID) %>% 
+  bind_rows(fishStationsFixed)
+
+fishStations <- rename(fishStations, 'Class' = 'Northing',
+                       'Special Standards' = 'Easting', 
+                       'Ecoregion Name' = 'Subecoregion', 
+                       'VAHU6' = 'DCRWSHED',
+                       'HUC8' = 'HUC')
+```
+
+Pin to server.
+
+```{r pin stations}
+pin(fishStations, Description = 'Station information from Fish EDAS, updated 04/06/2021', board = 'rsconnect')
+```
+
+
+### FishSamps
+
+I had to manually force the Start Time and End Time fields to "Time" format in Excel after export from Access.
+
+```{r fishSamps}
+fishSamps <-  read_excel('data/fishSamps.xlsx', sheet = 'FishSamps') %>% 
+  rename('FishSampID' = 'FSampID',
+         'RepNum' = 'FRepNum', 
+         'Field Team' = 'Investigators',
+         'Reach Length' = 'StWidMax') %>% 
+  mutate(`Collected By` = NA, 
+         Taxonomist = NA,
+         `Start Time` = as.character(`Start Time`),
+         `End Time` = as.character(`End Time`)) %>% 
+  separate(`Start Time`, c(NA, "Start Time"), sep = " ") %>% 
+  separate(`End Time`, c(NA, "End Time"), sep = " ")
+```
+
+Pin to server.
+
+```{r pin fishSamps}
+pin(fishSamps, Description = 'FishSamps information from Fish EDAS, updated 04/06/2021', board = 'rsconnect')
+```
+
+
+### Fishes
+
+Minor renaming for consistency
+
+```{r fishes}
+fishes <-  read_excel('data/Fishes.xlsx') %>% 
+  rename('FishSampID' = 'FSampID',
+         'RepNum' = 'FRepNum', 
+         'FinalID' = 'FFinalID')
+```
+
+
+Pin to server.
+
+```{r pin fishes}
+pin(fishes, Description = 'Fishes information from Fish EDAS, updated 04/06/2021', board = 'rsconnect')
+```
+
+
+### Fishes Master Taxa
+
+```{r master taxa}
+fishesMasterTaxa <-  read_excel('data/Fishes_Master_Taxa.xlsx') %>% 
+  rename('FishSampID' = "FFinalID",
+         "Tolerant" = "Tolerent", 
+         "Intolerant" = "Intolerent",
+         "Intolerantv2" = "Intolerentv2")
+```
+
+Pin to server.
+
+```{r pin mastertaxa}
+pin(fishesMasterTaxa, Description = 'Fish Master Taxa list from Fish EDAS, updated 04/06/2021', board = 'rsconnect')
+```
+
