@@ -17,20 +17,25 @@ fishSamps_Filter <- fishSamps %>%
     else .} %>% 
   {if(!is.null(RepFilter))
     filter(., RepNum %in% repFilter)
-    else . } 
+    else . } %>% 
+  left_join(dplyr::select(fishStations, StationID, StreamName, Order, Class, `Special Standards`, `Catchment Area sqMile`, Basin, Ecoregion, `Ecoregion Name`), by = 'StationID') %>% 
+  dplyr::select(FSampIndex:StationID, StreamName, Order, Class, `Special Standards`, `Catchment Area sqMile`, Basin, Ecoregion, `Ecoregion Name`,  everything()) %>% 
+  arrange(StationID, `Collection Date`)
 
 totalFish <- filter(fishes, FishSampID %in% fishSamps_Filter$FishSampID) %>% 
   {if(sumFish == TRUE)
     group_by(., FishSampID, FinalID) %>% 
       mutate(`Total Individuals` = sum(Individuals, na.rm = T)) %>% 
-      dplyr::select(-c(`Anomaly Code`, Anomaly, Individuals, Comments, `Entered Date`)) %>% 
+      dplyr::select(-c(`Anomaly Code`, Anomaly, Individuals, Comments, Hybrid, `Entered Date`)) %>% 
       ungroup() %>% 
       group_by(FishSampID, RepNum, FinalID) %>% 
       distinct(FinalID, .keep_all = T)
-    else . }
-
-left_join(fishSamps_Filter, by = c('FishSampID', 'RepNum')) %>% 
-  left_join(fishesMasterTaxa, by = 'FinalID') %>% 
+    else . } %>% 
+  left_join(dplyr::select(fishesMasterTaxa, FinalID, Genus, Species, `Genus-Species`), by = 'FinalID') %>% 
+  left_join(fishSamps_Filter, by = c('FishSampID', 'RepNum')) %>% 
+  dplyr::select(StationID, StreamName, Order,  Class, `Special Standards`, `Catchment Area sqMile`, 
+                Basin, Ecoregion, `Ecoregion Name`, FishSampID, RepNum, `Collection Date`, 
+                CollMeth, Duration, everything())
   
     
 
