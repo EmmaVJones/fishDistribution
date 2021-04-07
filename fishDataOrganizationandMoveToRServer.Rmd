@@ -47,8 +47,18 @@ fishStations <- rename(fishStations, 'Class' = 'Northing',
                        'Special Standards' = 'Easting', 
                        'Ecoregion Name' = 'Subecoregion', 
                        'VAHU6' = 'DCRWSHED',
-                       'HUC8' = 'HUC')
+                       'HUC8' = 'HUC',
+                       'Catchment Acreage' = 'Catchment  Acreage')
 ```
+
+Organize all watershed area information available from Probmon datasets and conserve va project.
+
+```{r organize watershed area as available}
+source('organizeWatershedArea.R')
+```
+
+
+
 
 Pin to server.
 
@@ -65,6 +75,7 @@ I had to manually force the Start Time and End Time fields to "Time" format in E
 fishSamps <-  read_excel('data/fishSamps.xlsx', sheet = 'FishSamps') %>% 
   rename('FishSampID' = 'FSampID',
          'RepNum' = 'FRepNum', 
+         `Collection Date` = 'CollDate', 
          'Field Team' = 'Investigators',
          'Reach Length' = 'StWidMax') %>% 
   mutate(`Collected By` = NA, 
