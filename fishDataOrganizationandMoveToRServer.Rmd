@@ -101,7 +101,28 @@ Minor renaming for consistency
 fishes <-  read_excel('data/Fishes.xlsx') %>% 
   rename('FishSampID' = 'FSampID',
          'RepNum' = 'FRepNum', 
-         'FinalID' = 'FFinalID')
+         'FinalID' = 'FFinalID') %>% 
+  dplyr::select(-Genus) %>%  # nothing in this field so drop it to avoid confusion later
+  # map anomalies to new field  
+  mutate(`Anomaly Code` = Anomaly,
+         Anomaly = case_when(Anomaly == 'A' ~ 'Anchor Worm',
+                             Anomaly == 'B' ~ 'Black Grub',
+                             Anomaly == 'D' ~ 'Deformities',
+                             Anomaly == 'E' ~ 'Eroded Fins',
+                             Anomaly == 'F' ~ 'Fungus',
+                             Anomaly == 'H' ~ 'Leeches',
+                             Anomaly == 'L' ~ 'Lesions',
+                             Anomaly == 'M' ~ 'Multiple DELT Anomalies',
+                             Anomaly == 'N' ~ 'No Anomalies Observed',
+                             Anomaly == 'P' ~ 'Popeye',
+                             Anomaly == 'R' ~ 'Parasites',
+                             Anomaly == 'S' ~ 'Emaciated',
+                             Anomaly == 'T' ~ 'Tumor',
+                             Anomaly == 'V' ~ 'Vouchered',
+                             Anomaly == 'Y' ~ 'Yellow Grub',
+                             Anomaly == 'Z' ~ 'Other',
+                             TRUE ~ as.character(NA))) %>% 
+  dplyr::select(FishIndex:FinalID, `Anomaly Code`, everything())
 ```
 
 
@@ -116,7 +137,7 @@ pin(fishes, Description = 'Fishes information from Fish EDAS, updated 04/06/2021
 
 ```{r master taxa}
 fishesMasterTaxa <-  read_excel('data/Fishes_Master_Taxa.xlsx') %>% 
-  rename('FishSampID' = "FFinalID",
+  rename('FinalID' = "FFinalID",
          "Tolerant" = "Tolerent", 
          "Intolerant" = "Intolerent",
          "Intolerantv2" = "Intolerentv2")
