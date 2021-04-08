@@ -100,23 +100,23 @@ fishStations2 <- left_join(fishStations, WQM_Stations_Spatial, by = 'StationID')
 
 # dumbed down dataset for fish distribution maps before real data cleanup happens
 # raw fish counts (including anomalies, etc.)
-rawFish <-  fishes %>% 
-  group_by( FishSampID, FinalID) %>% 
-  left_join(dplyr::select(fishesMasterTaxa, FinalID, Genus, Species, `Genus-Species`), by = 'FinalID') %>% 
-  left_join(fishSamps, by = c('FishSampID', 'RepNum')) %>% 
-  left_join(dplyr::select(fishStations, StationID, StreamName, Lat, Long,
-                          Order,  Class, `Special Standards`, `Catchment Area sqMile`, 
-                          Basin, Ecoregion, `Ecoregion Name`), by = 'StationID') %>% 
-  dplyr::select(StationID, StreamName, Lat, Long, Order,  Class, `Special Standards`, `Catchment Area sqMile`, 
-                Basin, Ecoregion, `Ecoregion Name`, FishSampID, RepNum, `Collection Date`, 
-                CollMeth, Duration, `Reach Length`, everything()) %>% 
-  
-  # drop missing location data for now
-  filter(!is.na(Lat) | !is.na(Long)) %>% 
-  
-  st_as_sf(coords = c("Long", "Lat"),  # make spatial layer using these columns
-           remove = T, # don't remove these lat/lon cols from df
-           crs = 4326)
+# rawFish <-  fishes %>% 
+#   group_by( FishSampID, FinalID) %>% 
+#   left_join(dplyr::select(fishesMasterTaxa, FinalID, Genus, Species, `Genus-Species`), by = 'FinalID') %>% 
+#   left_join(fishSamps, by = c('FishSampID', 'RepNum')) %>% 
+#   left_join(dplyr::select(fishStations, StationID, StreamName, Lat, Long,
+#                           Order,  Class, `Special Standards`, `Catchment Area sqMile`, 
+#                           Basin, Ecoregion, `Ecoregion Name`), by = 'StationID') %>% 
+#   dplyr::select(StationID, StreamName, Lat, Long, Order,  Class, `Special Standards`, `Catchment Area sqMile`, 
+#                 Basin, Ecoregion, `Ecoregion Name`, FishSampID, RepNum, `Collection Date`, 
+#                 CollMeth, Duration, `Reach Length`, everything()) %>% 
+#   
+#   # drop missing location data for now
+#   filter(!is.na(Lat) | !is.na(Long)) %>% 
+#   
+#   st_as_sf(coords = c("Long", "Lat"),  # make spatial layer using these columns
+#            remove = T, # don't remove these lat/lon cols from df
+#            crs = 4326)
 
 # cleaned up fish counts dropping different anomaly info
 totalFish <- fishes %>% 
@@ -160,7 +160,10 @@ totalFish <- fishes %>%
 #       left_join(stationsWithSpecies %>% ungroup() %>%
 #                   dplyr::select(StationID, StreamName, Lat, Long, Order, `Catchment Area sqMile`, Class, `Special Standards`) %>%
 #                   distinct(StationID, .keep_all = T),
-#                 by = 'StationID')
+#                 by = 'StationID') %>% 
+#       st_as_sf(coords = c("Long", "Lat"),  # make spatial layer using these columns
+#                remove = T, # don't remove these lat/lon cols from df
+#                crs = 4326)
 #     stationBySpeciesUniqueList[[i]] <- speciesCount
 #   }else{
 #     notFoundInDatabase <- rbind(notFoundInDatabase,i)

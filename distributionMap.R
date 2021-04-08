@@ -40,16 +40,16 @@ ui <- fluidPage(theme= "yeti.css",
 server <- function(input,output,session){
   
   taxaLocations <- reactive({req(input$taxaSelection)
-    fishStationsUnique[[input$taxaSelection]] %>% 
-      st_as_sf(coords = c("Long", "Lat"),  # make spatial layer using these columns
-               remove = T, # don't remove these lat/lon cols from df
-               crs = 4326)  })
+    fishStationsUnique[[input$taxaSelection]] })# %>% 
+     # st_as_sf(coords = c("Long", "Lat"),  # make spatial layer using these columns
+      #         remove = T, # don't remove these lat/lon cols from df
+        #       crs = 4326)  })
   
   taxaData <- reactive({req(taxaLocations())
     filter(totalFish, StationID %in% taxaLocations()$StationID) %>% 
       filter(FinalID %in% input$taxaSelection) })
   
-  output$distributionMap <- renderLeaflet({req(input$taxaSelection)
+  output$distributionMap <- renderLeaflet({
     # color palette for assessment polygons
     pal <- colorFactor(
       palette = topo.colors(7),
@@ -72,7 +72,7 @@ server <- function(input,output,session){
                   group="Assessment Regions", label = ~ASSESS_REG) %>% hideGroup('Assessment Regions') %>% 
       addPolygons(data= subbasins,  color = 'black', weight = 1,
                   fillColor= ~palSubbasins(subbasins$SUBBASIN), fillOpacity = 0.5,stroke=0.1,
-                  group="Subbasins", label = ~SUBBASIN) %>% hideGroup('Subbasins') %>% 
+                  group="Subbasins", label = ~SUBBASIN) %>% hideGroup('Subbasins') %>%
       inlmisc::AddHomeButton(raster::extent(-83.89, -74.80, 36.54, 39.98), position = "topleft") %>%
       addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
                        overlayGroups = c("Level III Ecoregions", 'Assessment Regions','Subbasins'),
@@ -85,7 +85,7 @@ server <- function(input,output,session){
   observe({req(nrow(taxaLocations()) > 0)
     palOrder <- colorFactor(c('red','orange','yellow','limegreen','blue','purple','gray'),domain = NULL, as.factor(c('1','2','3','4','5','6',NA)), ordered=T)
     
-    map_proxy %>%
+    map_proxy %>% clearMarkers() %>% clearControls() %>% #clearGroup('Capture Location') %>% 
       addCircleMarkers(data = taxaLocations(),
                        radius=6,color='black', fillColor =~palOrder(Order),fillOpacity = 1, 
                        opacity=1,weight = 2,stroke=T, group='Capture Location',
@@ -94,7 +94,7 @@ server <- function(input,output,session){
                                                                       "Catchment Area sqMile", "Class", "Special Standards",  
                                                                       "Total Count", "Years Collected")))%>%
       addLegend(data = taxaLocations(), "topright", pal = palOrder, values = ~Order,
-                title = "Strahler Order", opacity = 1) %>% 
+                title = "Strahler Order", opacity = 1, group = 'Capture Location') %>% 
       addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
                        overlayGroups = c("Capture Location", "Level III Ecoregions", 'Assessment Regions','Subbasins'),
                        options=layersControlOptions(collapsed=T),
