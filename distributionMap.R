@@ -22,7 +22,8 @@ ui <- fluidPage(theme= "yeti.css",
                            tabPanel('Taxa Distribution Map',
                                     fluidRow(column(4),
                                              column(4,selectInput('taxaSelection', 'Choose a taxa to plot on the distribution map',
-                                                                  choices = names(fishStationsUnique)))),
+                                                                  choices = names(fishStationsUnique))),
+                                             column(4,helpText('On load the map is blank, use the drop down to choose a taxa to plot.'))),
                                     #verbatimTextOutput('test'),
                                     leafletOutput('distributionMap'),
                                     h4('Taxa Collection Information'),
@@ -84,7 +85,6 @@ server <- function(input,output,session){
   observe({req(nrow(taxaLocations()) > 0)
     palOrder <- colorFactor(c('red','orange','yellow','limegreen','blue','purple','gray'),domain = NULL, as.factor(c('1','2','3','4','5','6',NA)), ordered=T)
     
-    
     map_proxy %>%
       addCircleMarkers(data = taxaLocations(),
                        radius=6,color='black', fillColor =~palOrder(Order),fillOpacity = 1, 
@@ -93,6 +93,8 @@ server <- function(input,output,session){
                        popup=leafpop::popupTable(taxaLocations(), zcol = c("StationID","StreamName", "Order" ,  
                                                                       "Catchment Area sqMile", "Class", "Special Standards",  
                                                                       "Total Count", "Years Collected")))%>%
+      addLegend(data = taxaLocations(), "topright", pal = palOrder, values = ~Order,
+                title = "Strahler Order", opacity = 1) %>% 
       addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
                        overlayGroups = c("Capture Location", "Level III Ecoregions", 'Assessment Regions','Subbasins'),
                        options=layersControlOptions(collapsed=T),
