@@ -33,28 +33,32 @@ The money query Jason Hill has traditionally used is the "Total Number of fish" 
 This table holds a lot of the same information that other pinned data contains on the server except a completed WQS class field. This dataset will be cleaned up and the minimal data will be pinned to the server. One day, this data should be removed as other datasets should contain the information.
 
 ```{r stations}
-fishStations <- read_excel('data/Stations.xlsx', sheet = 'Stations')
+fishStations <- read_excel('EDASdata/Stations.xlsx', sheet = 'Stations')
 ```
 
 Fix some missing data before moving online. Fix wrong column names.
 
 ```{r fish station issues}
-fishStationsFixed <- read_excel('data/Stations.xlsx', sheet = 'EVJfixes')
+fishStationsFixed <- read_excel('EDASdata/Stations.xlsx', sheet = 'EVJfixes')
 fishStations <- filter(fishStations, ! StationID %in% fishStationsFixed$StationID) %>% 
   bind_rows(fishStationsFixed)
 
-fishStations <- rename(fishStations, 'Class' = 'Northing',
+fishStations <- rename(fishStations, 
+                       'Class' = 'Northing',
                        'Special Standards' = 'Easting', 
                        'Ecoregion Name' = 'Subecoregion', 
                        'VAHU6' = 'DCRWSHED',
                        'HUC8' = 'HUC',
-                       'Catchment Acreage' = 'Catchment  Acreage')
+                       'Catchment Acreage' = 'Catchment  Acreage',
+                       'Station Comments' = 'Comments')
 ```
 
 Organize all watershed area information available from Probmon datasets and conserve va project.
 
 ```{r organize watershed area as available}
 source('organizeWatershedArea.R')
+
+fishStations <- filter(fishStations, Type != 'Test Site') # drop test site
 ```
 
 
@@ -72,12 +76,13 @@ pin(fishStations, Description = 'Station information from Fish EDAS, updated 04/
 I had to manually force the Start Time and End Time fields to "Time" format in Excel after export from Access.
 
 ```{r fishSamps}
-fishSamps <-  read_excel('data/fishSamps.xlsx', sheet = 'FishSamps') %>% 
+fishSamps <-  read_excel('EDASdata/fishSamps.xlsx', sheet = 'FishSamps') %>% 
   rename('FishSampID' = 'FSampID',
          'RepNum' = 'FRepNum', 
          `Collection Date` = 'CollDate', 
          'Field Team' = 'Investigators',
-         'Reach Length' = 'StWidMax') %>% 
+         'Reach Length' = 'StWidMax',
+         'FishSamps Comments' = 'Comments') %>% 
   mutate(`Collected By` = NA, 
          Taxonomist = NA,
          `Start Time` = as.character(`Start Time`),
@@ -98,10 +103,11 @@ pin(fishSamps, Description = 'FishSamps information from Fish EDAS, updated 04/0
 Minor renaming for consistency
 
 ```{r fishes}
-fishes <-  read_excel('data/Fishes.xlsx') %>% 
+fishes <-  read_excel('EDASdata/Fishes.xlsx') %>% 
   rename('FishSampID' = 'FSampID',
          'RepNum' = 'FRepNum', 
-         'FinalID' = 'FFinalID') %>% 
+         'FinalID' = 'FFinalID',
+         'Fishes Comments' = 'Comments') %>% 
   dplyr::select(-Genus) %>%  # nothing in this field so drop it to avoid confusion later
   # map anomalies to new field  
   mutate(`Anomaly Code` = Anomaly,
@@ -122,7 +128,7 @@ fishes <-  read_excel('data/Fishes.xlsx') %>%
                              Anomaly == 'Y' ~ 'Yellow Grub',
                              Anomaly == 'Z' ~ 'Other',
                              TRUE ~ as.character(NA))) %>% 
-  dplyr::select(FishIndex:FinalID, `Anomaly Code`, everything())
+  dplyr::select(FishIndex:FinalID, `Anomaly Code`, everything()) 
 ```
 
 
@@ -136,7 +142,7 @@ pin(fishes, Description = 'Fishes information from Fish EDAS, updated 04/06/2021
 ### Fishes Master Taxa
 
 ```{r master taxa}
-fishesMasterTaxa <-  read_excel('data/Fishes_Master_Taxa.xlsx') %>% 
+fishesMasterTaxa <-  read_excel('EDASdata/Fishes_Master_Taxa.xlsx') %>% 
   rename('FinalID' = "FFinalID",
          "Tolerant" = "Tolerent", 
          "Intolerant" = "Intolerent",

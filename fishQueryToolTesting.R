@@ -15,27 +15,35 @@ fishSamps_Filter <- fishSamps %>%
   {if(!is.null(dateRange))
     filter(., between(as.Date(`Collection Date`), dateRange[1], dateRange[2] ))
     else .} %>% 
-  {if(!is.null(RepFilter))
+  {if(!is.null(repFilter))
     filter(., RepNum %in% repFilter)
     else . } %>% 
   left_join(dplyr::select(fishStations, StationID, StreamName, Order, Class, `Special Standards`, `Catchment Area sqMile`, Basin, Ecoregion, `Ecoregion Name`), by = 'StationID') %>% 
   dplyr::select(FSampIndex:StationID, StreamName, Order, Class, `Special Standards`, `Catchment Area sqMile`, Basin, Ecoregion, `Ecoregion Name`,  everything()) %>% 
   arrange(StationID, `Collection Date`)
 
-totalFish <- filter(fishes, FishSampID %in% fishSamps_Filter$FishSampID) %>% 
-  {if(sumFish == TRUE)
-    group_by(., FishSampID, FinalID) %>% 
-      mutate(`Total Individuals` = sum(Individuals, na.rm = T)) %>% 
-      dplyr::select(-c(`Anomaly Code`, Anomaly, Individuals, Comments, Hybrid, `Entered Date`)) %>% 
-      ungroup() %>% 
-      group_by(FishSampID, RepNum, FinalID) %>% 
-      distinct(FinalID, .keep_all = T)
-    else . } %>% 
+# raw fish counts (including anomalies, etc.)
+rawFish <-  filter(fishes, FishSampID %in% fishSamps_Filter$FishSampID) %>% 
+  group_by( FishSampID, FinalID) %>% 
   left_join(dplyr::select(fishesMasterTaxa, FinalID, Genus, Species, `Genus-Species`), by = 'FinalID') %>% 
   left_join(fishSamps_Filter, by = c('FishSampID', 'RepNum')) %>% 
   dplyr::select(StationID, StreamName, Order,  Class, `Special Standards`, `Catchment Area sqMile`, 
                 Basin, Ecoregion, `Ecoregion Name`, FishSampID, RepNum, `Collection Date`, 
-                CollMeth, Duration, everything())
+                CollMeth, Duration, `Reach Length`, everything())
+
+# cleaned up fish counts dropping different anomaly info
+totalFish <- filter(fishes, FishSampID %in% fishSamps_Filter$FishSampID) %>% 
+  group_by( FishSampID, FinalID) %>% 
+  mutate(`Total Individuals` = sum(Individuals, na.rm = T)) %>% 
+  dplyr::select(-c(`Anomaly Code`, Anomaly, Individuals, `Fishes Comments`, Hybrid, `Entered Date`)) %>% 
+  ungroup() %>% 
+  group_by(FishSampID, RepNum, FinalID) %>% 
+  distinct(FinalID, .keep_all = T) %>% 
+  left_join(dplyr::select(fishesMasterTaxa, FinalID, Genus, Species, `Genus-Species`), by = 'FinalID') %>% 
+  left_join(fishSamps_Filter, by = c('FishSampID', 'RepNum')) %>% 
+  dplyr::select(StationID, StreamName, Order,  Class, `Special Standards`, `Catchment Area sqMile`, 
+                Basin, Ecoregion, `Ecoregion Name`, FishSampID, RepNum, `Collection Date`, 
+                CollMeth, Duration, `Reach Length`, everything())
   
     
 

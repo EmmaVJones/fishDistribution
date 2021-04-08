@@ -40,4 +40,5 @@ vignettes/*.pdf
 
 rsconnect/
 data/
+EDASdata/
 *.yml
