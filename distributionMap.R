@@ -7,6 +7,8 @@ subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
   mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>% 
   group_by(SUBBASIN) %>% 
   summarize()
+huc8 <- st_read('data/GIS/HUC8_EVJ.shp')
+
 
 #fishStationsUnique <- readRDS('data/fishStationsUnique.RDS')
 
@@ -55,11 +57,14 @@ server <- function(input,output,session){
       palette = topo.colors(7),
       domain = assessmentRegions$ASSESS_REG)
     pal2 <- colorFactor(
-      palette = rainbow(7),
+      palette = topo.colors(7),
       domain = ecoregion$US_L3NAME)
     palSubbasins <- colorFactor(
-      palette = topo.colors(17),
+      palette = terrain.colors(17),
       domain = subbasins$SUBBASIN)
+    palHUC8 <- colorFactor(
+      palette = rainbow(51),
+      domain = huc8$HUC8)
     
     
     CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE) %>%
@@ -73,9 +78,13 @@ server <- function(input,output,session){
       addPolygons(data= subbasins,  color = 'black', weight = 1,
                   fillColor= ~palSubbasins(subbasins$SUBBASIN), fillOpacity = 0.5,stroke=0.1,
                   group="Subbasins", label = ~SUBBASIN) %>% hideGroup('Subbasins') %>%
+      addPolygons(data= huc8,  color = 'black', weight = 1,
+                  fillColor= ~palHUC8(huc8$HUC8), fillOpacity = 0.5,stroke=0.1,
+                  group="HUC8", label = ~HUC8, 
+                  labelOptions = labelOptions(noHide = T, textOnly = TRUE, direction = "center")) %>% hideGroup('HUC8') %>%
       inlmisc::AddHomeButton(raster::extent(-83.89, -74.80, 36.54, 39.98), position = "topleft") %>%
       addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
-                       overlayGroups = c("Level III Ecoregions", 'Assessment Regions','Subbasins'),
+                       overlayGroups = c("Level III Ecoregions", 'Assessment Regions','Subbasins','HUC8'),
                        options=layersControlOptions(collapsed=T),
                        position='topleft')    })
   
@@ -96,7 +105,7 @@ server <- function(input,output,session){
       addLegend(data = taxaLocations(), "topright", pal = palOrder, values = ~Order,
                 title = "Strahler Order", opacity = 1, group = 'Capture Location') %>% 
       addLayersControl(baseGroups=c("Topo","Imagery","Hydrography"),
-                       overlayGroups = c("Capture Location", "Level III Ecoregions", 'Assessment Regions','Subbasins'),
+                       overlayGroups = c("Capture Location", "Level III Ecoregions", 'Assessment Regions','Subbasins','HUC8'),
                        options=layersControlOptions(collapsed=T),
                        position='topleft')  })
   

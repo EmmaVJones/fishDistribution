@@ -9,6 +9,8 @@ output: html_document
 knitr::opts_chunk$set(echo = FALSE)
 library(tidyverse)
 library(readxl)
+library(sf)
+library(lubridate)
 library(pins)
 library(config)
 
@@ -153,5 +155,141 @@ Pin to server.
 
 ```{r pin mastertaxa}
 pin(fishesMasterTaxa, Description = 'Fish Master Taxa list from Fish EDAS, updated 04/06/2021', board = 'rsconnect')
+```
+
+
+## Bring fish data back in
+
+```{r}
+library(sf)
+
+#### Fish Data
+fishes <- pin_get("ejones/fishes", board = "rsconnect")
+fishesMasterTaxa <- pin_get("ejones/fishesMasterTaxa", board = "rsconnect")
+fishSamps <- pin_get("ejones/fishSamps", board = "rsconnect")
+fishStations <- pin_get("ejones/fishStations", board = "rsconnect")
+```
+
+
+
+# Total fish query
+
+```{r}
+# cleaned up fish counts dropping different anomaly info
+totalFish <- fishes %>% 
+  group_by( FishSampID, FinalID) %>% 
+  mutate(`Total Individuals` = sum(Individuals, na.rm = T)) %>% 
+  dplyr::select(-c(`Anomaly Code`, Anomaly, Individuals, `Fishes Comments`, Hybrid, `Entered Date`)) %>% 
+  ungroup() %>% 
+  group_by(FishSampID, RepNum, FinalID) %>% 
+  distinct(FinalID, .keep_all = T) %>% 
+  left_join(dplyr::select(fishesMasterTaxa, FinalID, Genus, Species, `Genus-Species`), by = 'FinalID') %>% 
+  left_join(fishSamps, by = c('FishSampID', 'RepNum')) %>% 
+  left_join(dplyr::select(fishStations, StationID, StreamName, Lat, Long,
+                          Order,  Class, `Special Standards`, `Catchment Area sqMile`, 
+                          Basin, Ecoregion, `Ecoregion Name`), by = 'StationID') %>% 
+  dplyr::select(StationID, StreamName, Lat, Long, Order,  Class, `Special Standards`, `Catchment Area sqMile`, 
+                Basin, Ecoregion, `Ecoregion Name`, FishSampID, RepNum, `Collection Date`, 
+                CollMeth, Duration, `Reach Length`, everything()) %>% 
+  
+  # drop missing location data for now
+  filter(!is.na(Lat) | !is.na(Long)) %>% 
+  
+  st_as_sf(coords = c("Long", "Lat"),  # make spatial layer using these columns
+           remove = F, # don't remove these lat/lon cols from df
+           crs = 4326)
+```
+
+
+### Make huc8 layer
+
+```{r}
+assessment <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>% 
+  mutate(HUC8 = str_sub(HUC10, 1, 8)) %>% 
+  group_by(HUC8) %>% 
+  summarize()
+  
+# now get huc8 names to join
+huc12 <- read_csv('data/GIS/huc8Names.csv') %>% # exported from C:/HardDriveBackup/GIS/GIS_BaseLayer_Datasets.gdb/Hydrology/VA_SUBWATERSHED_6TH_ORDER_STG
+  mutate(HUC_8 = as.character(paste0(0,HUC_8))) %>% 
+  distinct(HUC_8, .keep_all = T)
+
+huc8 <- assessment %>% 
+  left_join(dplyr::select(huc12, HUC_8, HUC_8_NAME), by = c('HUC8'='HUC_8')) %>% 
+  dplyr::select(HUC8, HUC_8_NAME, everything())
+
+st_write(huc8, 'data/GIS/HUC8_EVJ.shp')
+rm(assessment);rm(huc12); rm(huc8)
+```
+
+
+
+## fish distribution by huc8
+
+```{r}
+huc8 <- st_read('data/GIS/HUC8_EVJ.shp')
+
+huc8nameOptions <- huc8 %>% 
+  st_drop_geometry() %>% 
+  arrange(HUC8) %>% 
+  mutate(HUC_8_NAME = as.character(HUC_8_NAME)) %>% 
+  pivot_wider(names_from = HUC8, values_from = HUC_8_NAME) %>% 
+  mutate(Taxa = NA) %>% 
+  dplyr::select(Taxa, everything())
+
+
+# organize total fish by taxa then station/year
+#i = "telescope shiner"
+stationBySpeciesUniqueList <- list()
+taxaByHUC8 <- tibble()
+
+notFoundInDatabase <- data.frame(Species=NA)
+
+for(i in unique(totalFish$FinalID)){
+  print(i)
+  stationsWithSpecies <- filter(totalFish, FinalID == i)
+  if(nrow(stationsWithSpecies) > 0){
+    speciesCount <- suppressMessages(
+      stationsWithSpecies %>%
+      arrange(`Collection Date`) %>% # rearrange to make Years Collected make sense
+      group_by(StationID) %>%
+      summarise(`Total Count` = sum(`Total Individuals`, na.rm = T),
+                `Years Collected` = paste0(year(`Collection Date`),  collapse = ", ")) %>%
+      left_join(stationsWithSpecies %>% ungroup() %>%
+                  dplyr::select(StationID, StreamName, Lat, Long, Order, `Catchment Area sqMile`, Class, `Special Standards`) %>%
+                  distinct(StationID, .keep_all = T),
+                by = 'StationID') %>%
+      st_as_sf(coords = c("Long", "Lat"),  # make spatial layer using these columns
+               remove = T, # don't remove these lat/lon cols from df
+               crs = 4326) %>% 
+      st_intersection(huc8) %>% 
+      rename('Total Count' = 'Total.Count',
+             'Years Collected' = 'Years.Collected', 
+             'Catchment Area sqMile' = 'Catchment.Area.sqMile',
+             'Special Standards' = 'Special.Standards') %>% 
+      mutate(Taxa = i))
+    
+    huc8summary <- bind_rows(huc8nameOptions,
+                             speciesCount %>%
+                               ungroup() %>% st_drop_geometry() %>%
+                               distinct(HUC8, .keep_all = T) %>% 
+                               group_by(Taxa, HUC8) %>% 
+                               summarise(`Total Count HUC8` = as.character(sum(`Total Count`, na.rm = T))) %>%  # character to match wide format
+                               arrange(HUC8) %>% 
+                               pivot_wider(names_from = HUC8, values_from = `Total Count HUC8` ) )
+    
+      
+    stationBySpeciesUniqueList[[i]] <- speciesCount
+    taxaByHUC8 <- bind_rows(taxaByHUC8, huc8summary)
+  }else{
+    notFoundInDatabase <- rbind(notFoundInDatabase,i)
+  }
+}
+notFoundInDatabase <- na.omit(notFoundInDatabase)
+taxaByHUC8 <- bind_rows(huc8nameOptions, filter(taxaByHUC8, !is.na(Taxa)) )
+
+write_csv(taxaByHUC8, 'data/taxaByHUC8.csv', na = "")
+
+saveRDS(stationBySpeciesUniqueList, 'data/fishStationsUnique.RDS')
 ```
 

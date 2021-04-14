@@ -85,6 +85,9 @@ Wqm_Stations_View <- pin_get("ejones/WQM-Stations-View", board = "rsconnect")
 WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
   rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
 
+# From fishDataOrganizationandMoveToRServer.Rmd
+fishStationsUnique <- readRDS('data/fishStationsUnique.RDS')
+
 
 yearsSampled <- fishSamps %>% 
   mutate(Year = year(`Collection Date`)) %>% 
@@ -143,33 +146,3 @@ totalFish <- fishes %>%
            crs = 4326)
 
 
-# organize total fish by taxa then station/year
-#i = 'slender chub'#"telescope shiner" 
-# stationBySpeciesUniqueList <- list()
-# notFoundInDatabase <- data.frame(Species=NA)
-# 
-# for(i in unique(totalFish$FinalID)){
-#   print(i)
-#   stationsWithSpecies <- filter(totalFish, FinalID == i)
-#   if(nrow(stationsWithSpecies) > 0){
-#     speciesCount <- stationsWithSpecies %>%
-#       arrange(`Collection Date`) %>% # rearrange to make Years Collected make sense
-#       group_by(StationID) %>%
-#       summarise(`Total Count` = sum(`Total Individuals`, na.rm = T),
-#                 `Years Collected` = paste0(year(`Collection Date`),  collapse = ", ")) %>%
-#       left_join(stationsWithSpecies %>% ungroup() %>%
-#                   dplyr::select(StationID, StreamName, Lat, Long, Order, `Catchment Area sqMile`, Class, `Special Standards`) %>%
-#                   distinct(StationID, .keep_all = T),
-#                 by = 'StationID') %>% 
-#       st_as_sf(coords = c("Long", "Lat"),  # make spatial layer using these columns
-#                remove = T, # don't remove these lat/lon cols from df
-#                crs = 4326)
-#     stationBySpeciesUniqueList[[i]] <- speciesCount
-#   }else{
-#     notFoundInDatabase <- rbind(notFoundInDatabase,i)
-#   }
-# }
-# notFoundInDatabase <- na.omit(notFoundInDatabase)
-# 
-#saveRDS(stationBySpeciesUniqueList, 'data/fishStationsUnique.RDS')
-fishStationsUnique <- readRDS('data/fishStationsUnique.RDS')
