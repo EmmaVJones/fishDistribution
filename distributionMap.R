@@ -19,6 +19,7 @@ ui <- fluidPage(theme= "yeti.css",
                                     h4('This is a preliminary application that allows users to explore fish data collected by DEQ
                                        and a rough query tool. These tools will improve as Fish EDAS is cleaned up and moved into
                                        CEDS.'),
+                                    h4('BCG attribute information can be found under the `Query Fish Data` tab.'),
                                     h4('Please contact Emma Jones (emma.jones@deq.virginia.gov) and Jason Hill (jason.hill@deq.virginia.gov)
                                        if you have any questions about the tool.')),
                            tabPanel('Taxa Distribution Map',
@@ -119,10 +120,13 @@ server <- function(input,output,session){
   
   output$totalFishData <- renderDataTable({ req(input$stationSelection)
     
-    fishData <- filter(totalFish, StationID %in% input$stationSelection)
+    fishData <- filter(totalFish, StationID %in% input$stationSelection) %>% 
+      left_join(fishBCG, by = c('FinalID'= 'AFSCommonName'))
+    
     
     datatable(fishData, rownames = F, escape= F, extensions = 'Buttons', selection = 'none',
-              options = list(dom = 'Bift', scrollY = '500px', scrollX = TRUE, pageLength = nrow(fishData),buttons=list('copy','colvis'))) })
+              options = list(dom = 'Bift', scrollY = '500px', scrollX = TRUE, pageLength = nrow(fishData),buttons=list('copy','colvis'))) %>% 
+      formatStyle(names(fishData)[c(38:48)], backgroundColor = styleInterval(bcgAttributeColors$brks, bcgAttributeColors$clrs))  })
   
     
   

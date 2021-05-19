@@ -1,3 +1,6 @@
+library(httr)
+httr::set_config(config(ssl_verifypeer = FALSE, ssl_verifyhost = FALSE))
+
 library(tidyverse)
 library(sf)
 library(shiny)
@@ -18,6 +21,7 @@ library(readxl)
 
 # Register RStudio Connect, don't need to do multiple times
 #board_register("rsconnect", server = "http://deq-rstudio-prod.cov.virginia.gov:3939")
+#board_register("rsconnect", server = "https://rconnect.deq.virginia.gov")
 
 # get configuration settings
 conn <- config::get("connectionSettings")
@@ -75,7 +79,11 @@ fishes <- pin_get("ejones/fishes", board = "rsconnect")
 fishesMasterTaxa <- pin_get("ejones/fishesMasterTaxa", board = "rsconnect")
 fishSamps <- pin_get("ejones/fishSamps", board = "rsconnect")
 fishStations <- pin_get("ejones/fishStations", board = "rsconnect")
-
+fishBCG <- read_excel('data/MasterAttributeFish_2019_May9.xlsx', sheet = 'FishMasterAttributes') %>% 
+  dplyr::select(AFSCommonName, Family, `BCG General`:`BCGatt Comment`, `BCGatt CnAp.oth`:`ELOHA Lithophil`)
+bcgAttributeColors <- list(
+  brks = c(1,2,3,4,5,6),
+  clrs = c("#21a654","#55e607","#f7f720","#f2c602", "#f70000", "#c70610", 'gray'))
 
 #### Station Data 
 
