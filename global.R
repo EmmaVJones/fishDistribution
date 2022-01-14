@@ -1,4 +1,5 @@
 library(httr)
+# need to comment this next line to run locally now???
 httr::set_config(config(ssl_verifypeer = FALSE, ssl_verifyhost = FALSE))
 
 library(tidyverse)
@@ -18,6 +19,14 @@ library(pins)
 library(sqldf)
 library(config)
 library(readxl)
+
+# update each rerun of EDAS ###############################################################
+
+
+# From fishDataOrganizationandMoveToRServer.Rmd
+fishStationsUnique <- readRDS("data/fishStationsUnique_2022-01-14.RDS")
+
+###############################################################################################
 
 # Register RStudio Connect, don't need to do multiple times
 #board_register("rsconnect", server = "http://deq-rstudio-prod.cov.virginia.gov:3939")
@@ -61,17 +70,6 @@ onStop(function() {
 #   trusted_connection = "yes"
 # )
 
-## For testing: Connect to ODS_test
-# establish db connection locally
-#pool <- dbPool(
-#  drv = odbc::odbc(),
-#  Driver = "SQL Server",  # note the space between SQL and Server ( how MS named driver)
-#  Server= "WSQ04151,50000",
-#  dbname = "ODS_test"
-#)
-#onStop(function() {
-#  poolClose(pool)
-#})
 
 
 #### Fish Data
@@ -93,8 +91,7 @@ Wqm_Stations_View <- pin_get("ejones/WQM-Stations-View", board = "rsconnect")
 WQM_Stations_Spatial <- pin_get("ejones/WQM-Stations-Spatial", board = "rsconnect") %>%
   rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
 
-# From fishDataOrganizationandMoveToRServer.Rmd
-fishStationsUnique <- readRDS('data/fishStationsUnique.RDS')
+
 
 
 yearsSampled <- fishSamps %>% 

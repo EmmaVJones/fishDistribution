@@ -1,4 +1,17 @@
-## global.R
+# Run in R 3.6.2
+
+
+# prior to  sending out, remember to save each data source as a .RDS to enable app use outside COV network
+# saveRDS(fishes, 'pinnedData_doNotUpload/fishes.RDS')
+# saveRDS(fishesMasterTaxa, 'pinnedData_doNotUpload/fishesMasterTaxa.RDS')
+# saveRDS(fishSamps, 'pinnedData_doNotUpload/fishSamps.RDS')
+# saveRDS(fishStations, 'pinnedData_doNotUpload/fishStations.RDS')
+# saveRDS(WQM_Station_Full, 'pinnedData_doNotUpload/WQM_Station_Full.RDS')
+# saveRDS(WQM_Stations_Spatial, 'pinnedData_doNotUpload/WQM_Stations_Spatial.RDS')
+# saveRDS(Wqm_Stations_View, 'pinnedData_doNotUpload/Wqm_Stations_View.RDS')
+
+
+## from global.R
 library(tidyverse)
 library(sf)
 library(shiny)
@@ -11,6 +24,16 @@ library(plotly)
 library(lubridate)
 library(sqldf)
 library(readxl)
+
+
+# update each rerun of EDAS ###############################################################
+
+
+# From fishDataOrganizationandMoveToRServer.Rmd
+fishStationsUnique <- readRDS("data/fishStationsUnique_2022-01-14.RDS")
+
+###############################################################################################
+
 
 assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
 ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
@@ -42,8 +65,7 @@ Wqm_Stations_View <- readRDS('pinnedData_doNotUpload/WQM_Stations_View.RDS')
 WQM_Stations_Spatial <- readRDS('pinnedData_doNotUpload/WQM_Stations_Spatial.RDS') %>%
     rename("Basin_Name" = "Basin_Code") # can't have same name different case when using sqldf
 
-# From fishDataOrganizationandMoveToRServer.Rmd
-fishStationsUnique <- readRDS('data/fishStationsUnique.RDS')
+
 
 
 yearsSampled <- fishSamps %>% 

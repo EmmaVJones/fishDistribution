@@ -41,7 +41,9 @@ fishStations <- read_excel('EDASdata/Stations.xlsx', sheet = 'Stations')
 Fix some missing data before moving online. Fix wrong column names.
 
 ```{r fish station issues}
-fishStationsFixed <- read_excel('EDASdata/Stations.xlsx', sheet = 'EVJfixes')
+fishStationsFixed <- read_excel('EDASdata/Stations.xlsx', sheet = 'EVJfixes') %>% 
+  mutate(HUC = as.character(HUC),
+         Ecoregion = as.character(Ecoregion))
 fishStations <- filter(fishStations, ! StationID %in% fishStationsFixed$StationID) %>% 
   bind_rows(fishStationsFixed)
 
@@ -69,7 +71,7 @@ fishStations <- filter(fishStations, Type != 'Test Site') # drop test site
 Pin to server.
 
 ```{r pin stations}
-pin(fishStations, Description = 'Station information from Fish EDAS, updated 04/06/2021', board = 'rsconnect')
+pin(fishStations, Description = paste0('Station information from Fish EDAS, updated ', Sys.Date()), board = 'rsconnect')
 ```
 
 
@@ -96,7 +98,7 @@ fishSamps <-  read_excel('EDASdata/fishSamps.xlsx', sheet = 'FishSamps') %>%
 Pin to server.
 
 ```{r pin fishSamps}
-pin(fishSamps, Description = 'FishSamps information from Fish EDAS, updated 04/06/2021', board = 'rsconnect')
+pin(fishSamps, Description = paste0('FishSamps information from Fish EDAS, updated', Sys.Date()), board = 'rsconnect')
 ```
 
 
@@ -137,7 +139,7 @@ fishes <-  read_excel('EDASdata/Fishes.xlsx') %>%
 Pin to server.
 
 ```{r pin fishes}
-pin(fishes, Description = 'Fishes information from Fish EDAS, updated 04/06/2021', board = 'rsconnect')
+pin(fishes, Description = paste0('Fishes information from Fish EDAS, updated ',Sys.Date()), board = 'rsconnect')
 ```
 
 
@@ -154,7 +156,7 @@ fishesMasterTaxa <-  read_excel('EDASdata/Fishes_Master_Taxa.xlsx') %>%
 Pin to server.
 
 ```{r pin mastertaxa}
-pin(fishesMasterTaxa, Description = 'Fish Master Taxa list from Fish EDAS, updated 04/06/2021', board = 'rsconnect')
+pin(fishesMasterTaxa, Description = paste0('Fish Master Taxa list from Fish EDAS, updated ',Sys.Date()), board = 'rsconnect')
 ```
 
 
@@ -203,23 +205,25 @@ totalFish <- fishes %>%
 
 ### Make huc8 layer
 
+Don't need to rerun each time you update EDAS data
+
 ```{r}
-assessment <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>% 
-  mutate(HUC8 = str_sub(HUC10, 1, 8)) %>% 
-  group_by(HUC8) %>% 
-  summarize()
-  
-# now get huc8 names to join
-huc12 <- read_csv('data/GIS/huc8Names.csv') %>% # exported from C:/HardDriveBackup/GIS/GIS_BaseLayer_Datasets.gdb/Hydrology/VA_SUBWATERSHED_6TH_ORDER_STG
-  mutate(HUC_8 = as.character(paste0(0,HUC_8))) %>% 
-  distinct(HUC_8, .keep_all = T)
-
-huc8 <- assessment %>% 
-  left_join(dplyr::select(huc12, HUC_8, HUC_8_NAME), by = c('HUC8'='HUC_8')) %>% 
-  dplyr::select(HUC8, HUC_8_NAME, everything())
-
-st_write(huc8, 'data/GIS/HUC8_EVJ.shp')
-rm(assessment);rm(huc12); rm(huc8)
+# assessment <- st_read('data/GIS/AssessmentRegions_VA84_basins.shp') %>% 
+#   mutate(HUC8 = str_sub(HUC10, 1, 8)) %>% 
+#   group_by(HUC8) %>% 
+#   summarize()
+#   
+# # now get huc8 names to join
+# huc12 <- read_csv('data/GIS/huc8Names.csv') %>% # exported from C:/HardDriveBackup/GIS/GIS_BaseLayer_Datasets.gdb/Hydrology/VA_SUBWATERSHED_6TH_ORDER_STG
+#   mutate(HUC_8 = as.character(paste0(0,HUC_8))) %>% 
+#   distinct(HUC_8, .keep_all = T)
+# 
+# huc8 <- assessment %>% 
+#   left_join(dplyr::select(huc12, HUC_8, HUC_8_NAME), by = c('HUC8'='HUC_8')) %>% 
+#   dplyr::select(HUC8, HUC_8_NAME, everything())
+# 
+# #st_write(huc8, 'data/GIS/HUC8_EVJ.shp')
+# rm(assessment);rm(huc12); rm(huc8)
 ```
 
 
@@ -288,8 +292,8 @@ for(i in unique(totalFish$FinalID)){
 notFoundInDatabase <- na.omit(notFoundInDatabase)
 taxaByHUC8 <- bind_rows(huc8nameOptions, filter(taxaByHUC8, !is.na(Taxa)) )
 
-write_csv(taxaByHUC8, 'data/taxaByHUC8.csv', na = "")
+write_csv(taxaByHUC8, paste0('data/taxaByHUC8_', Sys.Date(),'.csv'), na = "")
 
-saveRDS(stationBySpeciesUniqueList, 'data/fishStationsUnique.RDS')
+saveRDS(stationBySpeciesUniqueList, paste0('data/fishStationsUnique_',Sys.Date(), '.RDS'))
 ```
 
