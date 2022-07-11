@@ -48,3 +48,20 @@ totalFish <- filter(fishes, FishSampID %in% fishSamps_Filter$FishSampID) %>%
     
 
 
+## Taxa Word Bank Tab
+
+HUCSelected <- filter(WQM_Stations_Spatial, StationID %in% '2-JKS023.61') %>% 
+  pull(HUC10) %>% 
+  substr(1, 8) # extract first 8 characters to get HUC8 from HUC10
+
+taxaWordBank <- dplyr::select(taxaByHUC8, Taxa, !! HUCSelected)
+colNameAdjustment <- paste0(filter(taxaWordBank, is.na(Taxa))[,2] %>% pull(),
+                           " (", filter(taxaWordBank, is.na(Taxa))[,2] %>% names(), ")")
+
+taxaWordBank <- taxaWordBank %>% 
+  drop_na() %>%
+  left_join(dplyr::select(fishesMasterTaxa, FinalID, Family, Genus, Species), by = c('Taxa' = 'FinalID')) %>% 
+  dplyr::select(Family, Genus, Species, `Common Name` = Taxa, everything()) %>% 
+  arrange(Family, Genus) %>% 
+  mutate_at(vars(contains(HUCSelected)), funs(as.numeric(.)))
+names(taxaWordBank)[5] <- paste0('n Collected in ', colNameAdjustment)

@@ -1,6 +1,10 @@
 
 # read in 2020 IR probmon data
-probArea <- read_csv('C:/HardDriveBackup/R/GitHub/ProbMon-Integrated-Reports/2020ProbChapter/processedData/Wadeable_ProbMon_2001-2018_Final_Final.csv')
+#probArea <- read_csv('C:/HardDriveBackup/R/GitHub/ProbMon-Integrated-Reports/2020ProbChapter/processedData/Wadeable_ProbMon_2001-2018_Final_Final.csv')
+
+# read in 2022 IR probmon data
+probArea <- read_excel('C:/HardDriveBackup/R/GitHub/FreshwaterProbMonIntegratedReports/2022ProbChapter/processedData/Wadeable_ProbMon_2001-2020.xlsx',
+                     sheet = 'Wadeable_ProbMon_2001-2020')
 conserveVAarea <- read_csv('C:/HardDriveBackup/R/GitHub/LandcoverAnalysis/ConserveVA/Results/forDCR/landcoverResults.csv')
 
 # join available area to stations

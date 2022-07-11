@@ -25,7 +25,7 @@ ui <- fluidPage(theme= "yeti.css",
                            tabPanel('Taxa Distribution Map',
                                     fluidRow(column(4),
                                              column(4,selectInput('taxaSelection', 'Choose a taxa to plot on the distribution map',
-                                                                  choices = names(fishStationsUnique))),
+                                                                  choices = sort(names(fishStationsUnique)))),
                                              column(4,helpText('On load the map is blank, use the drop down to choose a taxa to plot.'))),
                                     #verbatimTextOutput('test'),
                                     leafletOutput('distributionMap'),
@@ -35,8 +35,22 @@ ui <- fluidPage(theme= "yeti.css",
                                     helpText('This is pretty rough right now bc we need to do some database cleanup before building
                                              out a proper query tool is worth it. Here is simple query tool for now.'),
                                     selectInput('stationSelection', 'Select Station to Query Fish Data',
-                                                choices = unique(totalFish$StationID)),
-                                    DT::dataTableOutput('totalFishData'), br(), br(), br())
+                                                choices = sort(unique(totalFish$StationID))),
+                                    DT::dataTableOutput('totalFishData'), br(), br(), br()),
+                           tabPanel('Taxa Word Bank',
+                                    helpText('This section of Fish EDAS aims to assist biologists with taxa identification in the field.
+                                             To optimize this information, please enter the StationID of the site you intend to visit and
+                                             press the `Pull Taxa Options` button. This will return a spreadsheet of all taxa DEQ staff
+                                             have collected in the HUC8 where you site is located.'),
+                                    helpText('By printing this information to PDF and referencing the available taxa choices in the field,
+                                             staff should improve and expedite fish identification while streamside.'),
+                                    helpText('A complimentary DEQ developed field guide is in development to offer better photographs
+                                             and identification tips for reference in the field. Stay tuned on that project.'),
+                                    fluidRow(
+                                      column(4, selectInput('stationChoice', 'Enter DEQ StationID for Taxa list',
+                                                choices = sort(unique(WQM_Stations_Spatial$StationID)))),
+                                      column(4, actionButton('pullTaxaOptions', 'Pull Taxa Options'))),
+                                    DT::dataTableOutput('taxaOptions'), br(), br(), br() )
                               ) )
   
 
@@ -125,11 +139,45 @@ server <- function(input,output,session){
     
     
     datatable(fishData, rownames = F, escape= F, extensions = 'Buttons', selection = 'none',
-              options = list(dom = 'Bift', scrollY = '500px', scrollX = TRUE, pageLength = nrow(fishData),buttons=list('copy','colvis'))) %>% 
+              options = list(dom = 'Bift', scrollY = '500px', scrollX = TRUE, pageLength = nrow(fishData),
+                             buttons=list('copy','colvis',
+                                          list(
+                                            extend = 'collection',
+                                            buttons = c('csv', 'excel'),#, 'pdf'),
+                                            text = 'Download')))) %>% 
       formatStyle(names(fishData)[c(38:48)], backgroundColor = styleInterval(bcgAttributeColors$brks, bcgAttributeColors$clrs))  })
   
     
   
+  ## Taxa Word Bank Tab
+  
+  output$taxaOptions <- renderDataTable({req(input$pullTaxaOptions, input$stationChoice)
+    HUCSelected <- filter(WQM_Stations_Spatial, StationID %in% input$stationChoice) %>% 
+      pull(HUC10) %>% 
+      substr(1, 8) # extract first 8 characters to get HUC8 from HUC10
+    
+    taxaWordBank <- dplyr::select(taxaByHUC8, Taxa, !! HUCSelected)
+    colNameAdjustment <- paste0(filter(taxaWordBank, is.na(Taxa))[,2] %>% pull(),
+                                " (", filter(taxaWordBank, is.na(Taxa))[,2] %>% names(), ")")
+    
+    taxaWordBank <- taxaWordBank %>% 
+      drop_na() %>%
+      left_join(dplyr::select(fishesMasterTaxa, FinalID, Family, Genus, Species), by = c('Taxa' = 'FinalID')) %>% 
+      dplyr::select(Family, Genus, Species, `Common Name` = Taxa, everything()) %>% 
+      arrange(Family, Genus) %>% 
+      mutate_at(vars(contains(HUCSelected)), funs(as.numeric(.)))
+    names(taxaWordBank)[5] <- paste0('n Collected in ', colNameAdjustment)
+    
+    
+    datatable(taxaWordBank, rownames = F, escape= F, extensions = 'Buttons', selection = 'none',
+              options = list(dom = 'Bift', scrollY = '500px', scrollX = TRUE, pageLength = nrow(taxaWordBank),
+                             buttons=list('copy','colvis',
+                                          list(
+                                            extend = 'collection',
+                                            buttons = c('csv', 'excel', 'pdf'),
+                                            text = 'Download'))))
+    })
+
   #output$test <- renderPrint({taxaLocations()})
   
   

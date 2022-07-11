@@ -24,7 +24,9 @@ library(readxl)
 
 
 # From fishDataOrganizationandMoveToRServer.Rmd
-fishStationsUnique <- readRDS("data/fishStationsUnique_2022-01-14.RDS")
+fishStationsUnique <- readRDS("data/fishStationsUnique_2022-07-11.RDS")
+#fishStationsUnique <- readRDS("data/fishStationsUnique_2022-01-14.RDS")
+taxaByHUC8 <- read_csv('data/taxaByHUC8_2022-07-11.csv')
 
 ###############################################################################################
 

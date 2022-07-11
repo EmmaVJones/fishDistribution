@@ -62,7 +62,6 @@ Organize all watershed area information available from Probmon datasets and cons
 ```{r organize watershed area as available}
 source('organizeWatershedArea.R')
 
-fishStations <- filter(fishStations, Type != 'Test Site') # drop test site
 ```
 
 
@@ -276,7 +275,7 @@ for(i in unique(totalFish$FinalID)){
     huc8summary <- bind_rows(huc8nameOptions,
                              speciesCount %>%
                                ungroup() %>% st_drop_geometry() %>%
-                               distinct(HUC8, .keep_all = T) %>% 
+                               #distinct(HUC8, .keep_all = T) %>% 
                                group_by(Taxa, HUC8) %>% 
                                summarise(`Total Count HUC8` = as.character(sum(`Total Count`, na.rm = T))) %>%  # character to match wide format
                                arrange(HUC8) %>% 
