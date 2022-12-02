@@ -46,10 +46,25 @@ ui <- fluidPage(theme= "yeti.css",
                                              staff should improve and expedite fish identification while streamside.'),
                                     helpText('A complimentary DEQ developed field guide is in development to offer better photographs
                                              and identification tips for reference in the field. Stay tuned on that project.'),
+                                    
+                                    radioButtons("stationOrCoords", "Identify Taxa List By StationID or Coordinates", 
+                                                 choices = c('StationID', "Coordinates")),
+                                    
                                     fluidRow(
-                                      column(4, selectInput('stationChoice', 'Enter DEQ StationID for Taxa list',
-                                                choices = sort(unique(WQM_Stations_Spatial$StationID)))),
+                                      conditionalPanel(condition = "input.stationOrCoords == 'StationID'", 
+                                                       column(4, selectInput('stationChoice', 'Enter DEQ StationID for Taxa list',
+                                                                             choices = sort(unique(WQM_Stations_Spatial$StationID))))),
+                                      conditionalPanel(condition = "input.stationOrCoords == 'Coordinates'", 
+                                                       column(4, numericInput('Latitude',  'Enter New Station Latitude', value = 37.983, min = -35, max = -40),
+                                                                 numericInput('Longitude', 'Enter New Station Longitude', value = -78.999, min = -73, max = -85))),
                                       column(4, actionButton('pullTaxaOptions', 'Pull Taxa Options'))),
+                                    
+                                      
+                                    # )
+                                    # fluidRow(
+                                    #   column(4, selectInput('stationChoice', 'Enter DEQ StationID for Taxa list',
+                                    #             choices = sort(unique(WQM_Stations_Spatial$StationID)))),
+                                    #   column(4, actionButton('pullTaxaOptions', 'Pull Taxa Options'))),
                                     DT::dataTableOutput('taxaOptions'), br(), br(), br() )
                               ) )
   
@@ -149,7 +164,17 @@ server <- function(input,output,session){
   
     
   
+  
+  
+  
   ## Taxa Word Bank Tab
+  
+  # step to identify HUC by either station or Coords saved as reactive
+  
+  # add error message if invalid coordinates (dont hit huc in VA)
+  
+  # send taht info to taxaOptions to reorganize data and output table
+  
   
   output$taxaOptions <- renderDataTable({req(input$pullTaxaOptions, input$stationChoice)
     HUCSelected <- filter(WQM_Stations_Spatial, StationID %in% input$stationChoice) %>% 
