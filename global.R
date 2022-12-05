@@ -13,10 +13,10 @@ library(DBI)
 #library(measurements) #only necessary if don't use Rex's dataset for points
 library(plotly)
 library(lubridate)
-library(pool)
+# library(pool)
 library(geojsonsf)
 library(pins)
-library(sqldf)
+# library(sqldf)
 library(config)
 library(readxl)
 
@@ -41,27 +41,27 @@ board_register_rsconnect(key = conn$CONNECT_API_KEY,  #Sys.getenv("CONNECT_API_K
                          server = conn$CONNECT_SERVER)#Sys.getenv("CONNECT_SERVER"))
 
 
-# Set up pool connection to production environment
-pool <- dbPool(
-  drv = odbc::odbc(),
-  Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
-  # Production Environment
-  Server= "DEQ-SQLODS-PROD,50000",
-  dbname = "ODS",
-  UID = conn$UID_prod,
-  PWD = conn$PWD_prod,
-  #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
-  # Test environment
-  #Server= "WSQ04151,50000",
-  #dbname = "ODS_test",
-  #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
-  #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
-  trusted_connection = "yes"
-)
-onStop(function() {
-  poolClose(pool)
-})
+# # Set up pool connection to production environment
+# pool <- dbPool(
+#   drv = odbc::odbc(),
+#   Driver = "SQLServer",   # note the LACK OF space between SQL and Server ( how RStudio named driver)
+#   # Production Environment
+#   Server= "DEQ-SQLODS-PROD,50000",
+#   dbname = "ODS",
+#   UID = conn$UID_prod,
+#   PWD = conn$PWD_prod,
+#   #UID = Sys.getenv("userid_production"), # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd_production")   # need to change in Connect {vars}
+#   # Test environment
+#   #Server= "WSQ04151,50000",
+#   #dbname = "ODS_test",
+#   #UID = Sys.getenv("userid"),  # need to change in Connect {vars}
+#   #PWD = Sys.getenv("pwd"),  # need to change in Connect {vars}
+#   trusted_connection = "yes"
+# )
+# onStop(function() {
+#   poolClose(pool)
+# })
 
 # ## For testing: connect to ODS production
 # pool <- dbPool(
