@@ -4,13 +4,13 @@ assessmentRegions <- st_read( 'data/GIS/AssessmentRegions_simple.shp')
 ecoregion <- st_read('data/GIS/vaECOREGIONlevel3__proj84.shp')
 subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
   rename('SUBBASIN' = 'SUBBASIN_1') %>%
-  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>% 
-  group_by(SUBBASIN) %>% 
+  mutate(SUBBASIN = ifelse(is.na(SUBBASIN), as.character(BASIN_NAME), as.character(SUBBASIN))) %>%
+  group_by(SUBBASIN) %>%
   summarize()
 huc8 <- st_read('data/GIS/HUC8_EVJ.shp')
 
 
-#fishStationsUnique <- readRDS('data/fishStationsUnique.RDS')
+fishStationsUnique <- readRDS('data/fishStationsUnique.RDS')
 
 
 ui <- fluidPage(theme= "yeti.css",
@@ -39,7 +39,7 @@ ui <- fluidPage(theme= "yeti.css",
                                     DT::dataTableOutput('totalFishData'), br(), br(), br()),
                            tabPanel('Taxa Word Bank',
                                     helpText('This section of Fish EDAS aims to assist biologists with taxa identification in the field.
-                                             To optimize this information, please enter the StationID of the site you intend to visit and
+                                             To optimize this information, please enter the StationID or coordinates of the site you intend to visit and
                                              press the `Pull Taxa Options` button. This will return a spreadsheet of all taxa DEQ staff
                                              have collected in the HUC8 where you site is located.'),
                                     helpText('By printing this information to PDF and referencing the available taxa choices in the field,
@@ -55,16 +55,16 @@ ui <- fluidPage(theme= "yeti.css",
                                                        column(4, selectInput('stationChoice', 'Enter DEQ StationID for Taxa list',
                                                                              choices = sort(unique(WQM_Stations_Spatial$StationID))))),
                                       conditionalPanel(condition = "input.stationOrCoords == 'Coordinates'", 
-                                                       column(4, numericInput('Latitude',  'Enter New Station Latitude', value = 37.983, min = -35, max = -40),
-                                                                 numericInput('Longitude', 'Enter New Station Longitude', value = -78.999, min = -73, max = -85))),
-                                      column(4, actionButton('pullTaxaOptions', 'Pull Taxa Options'))),
-                                    
+                                                       column(4, numericInput('latitude',  'Enter New Station Latitude', value = 37.983, min = -35, max = -40),
+                                                                 numericInput('longitude', 'Enter New Station Longitude', value = -78.999, min = -73, max = -85))),
+                                      column(4, actionButton('pullTaxaOptions', 'Pull Taxa Options'),
+                                             helpText('If no map appears after clicking the `Pull Taxa Options` button, please check that your coordinates are valid.')),
                                       
-                                    # )
-                                    # fluidRow(
-                                    #   column(4, selectInput('stationChoice', 'Enter DEQ StationID for Taxa list',
-                                    #             choices = sort(unique(WQM_Stations_Spatial$StationID)))),
-                                    #   column(4, actionButton('pullTaxaOptions', 'Pull Taxa Options'))),
+                                      # tiny preview map
+                                      column(4, leafletOutput('sitePreviewMap',height="30vh") ) ),
+                                    
+                                    #verbatimTextOutput('test'),
+                                     
                                     DT::dataTableOutput('taxaOptions'), br(), br(), br() )
                               ) )
   
@@ -171,17 +171,52 @@ server <- function(input,output,session){
   
   # step to identify HUC by either station or Coords saved as reactive
   
-  # add error message if invalid coordinates (dont hit huc in VA)
+  siteLocation <- eventReactive(input$pullTaxaOptions, {#req(input$stationOrCoords, input$pullTaxaOptions)
+    if(input$stationOrCoords == 'StationID'){
+      filter(WQM_Stations_Spatial, StationID %in% input$stationChoice) %>% 
+        st_as_sf(coords = c("Longitude", "Latitude"),  # make spatial layer using these columns
+                 remove = T, # remove these lat/lon cols from df
+                 crs = 4326)  
+      
+    } else {
+      tibble(StationID = "New Site", Latitude = input$latitude, Longitude = input$longitude) %>% 
+        st_as_sf(coords = c("Longitude", "Latitude"),  # make spatial layer using these columns
+                 remove = T, # remove these lat/lon cols from df
+                 crs = 4326)  
+      } })
   
-  # send taht info to taxaOptions to reorganize data and output table
   
   
-  output$taxaOptions <- renderDataTable({req(input$pullTaxaOptions, input$stationChoice)
-    HUCSelected <- filter(WQM_Stations_Spatial, StationID %in% input$stationChoice) %>% 
-      pull(HUC10) %>% 
-      substr(1, 8) # extract first 8 characters to get HUC8 from HUC10
-    
-    taxaWordBank <- dplyr::select(taxaByHUC8, Taxa, !! HUCSelected)
+  HUCSelected <- reactive({req(siteLocation())
+    if(input$stationOrCoords == 'StationID'){
+      siteLocation() %>% 
+        pull(HUC10) %>% 
+        substr(1, 8) # extract first 8 characters to get HUC8 from HUC10
+    } else {
+      suppressWarnings(suppressMessages(st_intersection(siteLocation(), huc8)) %>% #simmer down
+                                        pull(HUC8) %>% 
+                                        as.character()) } })
+  
+  #output$test <- renderPrint(HUCSelected())
+   
+  # Site Preview map
+  output$sitePreviewMap <- renderLeaflet({req(HUCSelected(), siteLocation())
+    CreateWebMap(maps = c("Topo","Imagery","Hydrography"), collapsed = TRUE) %>%
+      #setView(-79.1, 37.7, zoom=7)  %>% 
+      addPolygons(data= huc8 %>% 
+                    filter(HUC8 %in% HUCSelected()),  color = 'black', weight = 1,
+                  fillColor= 'grey', fillOpacity = 0.5,stroke=0.1,
+                  group="HUC8", label = ~HUC8, 
+                  labelOptions = labelOptions(noHide = T, textOnly = TRUE, direction = "center")) %>% #hideGroup('HUC8') %>%
+      addCircleMarkers(data = siteLocation(),
+                       radius=6,color='black', fillColor ='red',fillOpacity = 1, 
+                       opacity=1,weight = 2,stroke=T)  })
+  
+  
+  
+  output$taxaOptions <- renderDataTable({req(input$pullTaxaOptions, ! is.na(HUCSelected()))
+     
+    taxaWordBank <- dplyr::select(taxaByHUC8, Taxa, !! HUCSelected())
     colNameAdjustment <- paste0(filter(taxaWordBank, is.na(Taxa))[,2] %>% pull(),
                                 " (", filter(taxaWordBank, is.na(Taxa))[,2] %>% names(), ")")
     
@@ -190,7 +225,7 @@ server <- function(input,output,session){
       left_join(dplyr::select(fishesMasterTaxa, FinalID, Family, Genus, Species), by = c('Taxa' = 'FinalID')) %>% 
       dplyr::select(Family, Genus, Species, `Common Name` = Taxa, everything()) %>% 
       arrange(Family, Genus) %>% 
-      mutate_at(vars(contains(HUCSelected)), funs(as.numeric(.)))
+      mutate_at(vars(contains(HUCSelected())), funs(as.numeric(.)))
     names(taxaWordBank)[5] <- paste0('n Collected in ', colNameAdjustment)
     
     

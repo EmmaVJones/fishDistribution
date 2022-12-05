@@ -50,9 +50,29 @@ totalFish <- filter(fishes, FishSampID %in% fishSamps_Filter$FishSampID) %>%
 
 ## Taxa Word Bank Tab
 
-HUCSelected <- filter(WQM_Stations_Spatial, StationID %in% '2-JKS023.61') %>% 
-  pull(HUC10) %>% 
-  substr(1, 8) # extract first 8 characters to get HUC8 from HUC10
+# first get a location from either the station provided or lat/lng
+stationOrCoords <- "Station" # "Coordinates" # user radiobutton input to allow selectInput or numericInput x2
+
+stationChoice <- '2-JKS023.61'
+latitude <- 37.983
+longitude <- -78.999
+
+if(stationOrCoords == 'Station'){
+  HUCSelected <- filter(WQM_Stations_Spatial, StationID %in% '2-JKS023.61') %>% 
+    pull(HUC10) %>% 
+    substr(1, 8) # extract first 8 characters to get HUC8 from HUC10
+} else {
+  siteLocation <- tibble(StationID = "New Site", Latitude = latitude, Longitude = longitude) %>% 
+    st_as_sf(coords = c("Longitude", "Latitude"),  # make spatial layer using these columns
+            remove = T, # remove these lat/lon cols from df
+            crs = 4326)  
+  HUCSelected <- suppressWarnings(suppressMessages(st_intersection(siteLocation, huc8)) %>% #simmer down
+    pull(HUC8) %>% 
+    as.character())
+}
+
+
+
 
 taxaWordBank <- dplyr::select(taxaByHUC8, Taxa, !! HUCSelected)
 colNameAdjustment <- paste0(filter(taxaWordBank, is.na(Taxa))[,2] %>% pull(),
