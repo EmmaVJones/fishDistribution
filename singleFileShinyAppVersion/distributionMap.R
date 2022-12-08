@@ -10,7 +10,7 @@ subbasins <- st_read('data/GIS/DEQ_VAHUSB_subbasins_EVJ.shp') %>%
 huc8 <- st_read('data/GIS/HUC8_EVJ.shp')
 
 
-fishStationsUnique <- readRDS('data/fishStationsUnique.RDS')
+#fishStationsUnique <- readRDS('data/fishStationsUnique.RDS')
 
 
 ui <- fluidPage(theme= "yeti.css",
