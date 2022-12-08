@@ -41,7 +41,7 @@ fishStations <- read_excel('EDASdata/Stations.xlsx', sheet = 'Stations')
 Fix some missing data before moving online. Fix wrong column names.
 
 ```{r fish station issues}
-fishStationsFixed <- read_excel('EDASdata/Stations.xlsx', sheet = 'EVJfixes') %>% 
+fishStationsFixed <- read_csv('EDASdata/Stations_EVJfixes.csv') %>% 
   mutate(HUC = as.character(HUC),
          Ecoregion = as.character(Ecoregion))
 fishStations <- filter(fishStations, ! StationID %in% fishStationsFixed$StationID) %>% 
