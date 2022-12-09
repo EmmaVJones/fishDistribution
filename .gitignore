@@ -42,4 +42,5 @@ rsconnect/
 data/
 EDASdata/
 *.yml
+*.csv
 pinnedData_doNotUpload/
